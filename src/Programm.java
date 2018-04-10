@@ -4,32 +4,104 @@ import java.util.Scanner;
 public class Programm {	
 	// Liste des turbines
 	private ArrayList<Turbine> list_turbine = new ArrayList<Turbine>();
-	// Liste de tous les tableaux que l'on garde en mémoire
-	private ArrayList<float[][]> list_table = new ArrayList<float[][]>();
-	
-	private int qTurbine;
-	private float elevAmont;
+	public ArrayList<Turbine> getList_turbine() {
+		return list_turbine;
+	}
 
+	public void setList_turbine(ArrayList<Turbine> list_turbine) {
+		this.list_turbine = list_turbine;
+	}
+
+	// Liste des initialisations
+	private ArrayList<Initialisation> list_init = new ArrayList<Initialisation>();
+	
+	private float qTurbine;
+	private float elevAmont;
+	private float streamFlowExceed;
+	private float finalPowerProduction;
+
+	public float getFinalPowerProduction() {
+		return finalPowerProduction;
+	}
+
+	public void setFinalPowerProduction(float finalPowerProduction) {
+		this.finalPowerProduction = finalPowerProduction;
+	}
+
+	public float getStreamFlowExceed() {
+		return streamFlowExceed;
+	}
+
+	public void setStreamFlowExceed(float streamFlowExceed) {
+		this.streamFlowExceed = streamFlowExceed;
+	}
+	
+	// Première étape
 	private float[][] firstStep;
-	private float[][] thisStep;
+	
+	// Étape secondaire
 	private float[][] temporyStep;
+	private float[][] finalStep;
+	
 	private float[][] previousStep;
 	private float[][] lastStep;
 	private int indexPreviousStep = 0;
 	
-	public Programm(int qTurbine, float elevAmont, boolean turbines_enable, boolean turbines_SameStreamFlow) {
+	/*
+	 * Initialisation
+	 */
+	public Programm(float qTurbine, float elevAmont, ArrayList<Initialisation> list_init) {
+		this.qTurbine = qTurbine;
+		this.elevAmont = elevAmont;
+		
+		// On regarde si list_init est supérieur à 2 élements
+		assert(list_init.size() > 2);
+		int qTemp = 0;
+		
+		// initialisation de la turbine 1
+		list_turbine.add(new Turbine((list_init.get(0).index), list_init.get(0).qmin, list_init.get(0).qmax, 1, true, qTurbine));
+		
+		// initialisation des autres turbines
+		for(int i=1; i< list_init.size(); i++) {
+			qTemp = 0;
+			for(int j=i; j < list_init.size(); j++) {
+				qTemp = qTemp + list_init.get(j).qmax;
+				
+				// on regarde si débit turbiné supérieur à débit max de toutes les turbines
+				if(i == 1 && j==list_init.size()-1 && (qTurbine > qTemp + list_init.get(0).qmax)) {
+					setStreamFlowExceed((float) (qTurbine - (qTemp + list_init.get(0).qmax)));
+					System.out.print("Débit relaché (qui ne produit pas d'energie) = " + (qTurbine - (qTemp + list_init.get(0).qmax)));
+					this.qTurbine = qTemp + list_init.get(0).qmax;
+					
+					// change turbine 1 Qturbine
+					list_turbine.get(0).changeFirstTurbineQturbine(qTemp + list_init.get(0).qmax);
+				}
+			}
+			list_turbine.add(new Turbine(i+1,list_init.get(i).qmin, list_init.get(i).qmax, qTemp, false, qTurbine));
+		}
+	}
+	
+	public Programm(float qTurbine, float elevAmont, boolean turbines_enable, boolean turbines_SameStreamFlow) {
 		this.qTurbine = qTurbine;
 		this.elevAmont = elevAmont;
 		
 		if(turbines_enable && turbines_SameStreamFlow) {
-			for(int i = 0; i < 5; i++) {
-				list_turbine.add(new Turbine(i+1, qTurbine));
+			//Cas 1
+			System.out.println("turbine 1");
+			list_turbine.add(new Turbine(1, 0, 180, 1, true, qTurbine));
+			//Cas 2 3 et 4
+			System.out.println("turbine 2/3/4/5");
+			for(int i = 2; i <= 5; i++) {
+				list_turbine.add(new Turbine(i, 0, 180, (5 - i + 1)*180, false, qTurbine));
 			}
+			//Cas 5
+			System.out.println("turbine 5");
 		} 
+		
 		else{
 			Scanner turbines = new Scanner(System.in);
 			
-			System.out.println("Toutes les turbines ne sont pas en marchent! \n");
+			System.out.println("Toutes les turbines ne sont pas en marche! \n");
 			for(int i = 0; i < 5; i++) {
 				boolean turbineEnable;
 				float maxStreamFlow; 
@@ -50,7 +122,7 @@ public class Programm {
 						turbine = turbines.nextLine();
 					}
 					if(turbine.equalsIgnoreCase("o")){
-						list_turbine.add(new Turbine(i+1, qTurbine));
+						list_init.add(new Initialisation(i+1));
 					} else {
 						//Réponse fausse donnée avant : On demande la valeur de débit max pour la i+1ème turbine
 						System.out.println("Quel est le débit de la " + (i+1) + "ère/nde/ème turbine ? \n");
@@ -59,9 +131,33 @@ public class Programm {
 							System.out.println("Réponse incorrect ! Quel est le débit de la " + i+1 + "ère/nde/ème turbine ? \n");
 							turbine = turbines.nextLine();
 						}
-						list_turbine.add(new Turbine(i+1, Integer.parseInt(turbine), qTurbine));
+						list_init.add(new Initialisation(i+1, Integer.parseInt(turbine)));
 					}
 				}
+			}
+			/*
+			 * Initialisation
+			 */
+			// On regarde si list_init est supérieur à 2 élements
+			assert(list_init.size() > 2);
+			int qTemp = 0;
+			// initialisation de la turbine 1
+			list_turbine.add(new Turbine((list_init.get(0).index), list_init.get(0).qmin, list_init.get(0).qmax, 1, true, qTurbine));
+			// initialisation des autres turbines
+			for(int i=1; i< list_init.size(); i++) {
+				qTemp = 0;
+				for(int j=i; j < list_init.size(); j++) {
+					qTemp = qTemp + list_init.get(j).qmax;
+					// on regarde si débit turbiné supérieur à débit max de toutes les turbines
+					if(i == 1 && j==list_init.size()-1 && (qTurbine > qTemp + list_init.get(0).qmax)) {
+						setStreamFlowExceed((float) (qTurbine - (qTemp + list_init.get(0).qmax)));
+						System.out.print("Débit relaché (qui ne produit pas d'energie) = " + (qTurbine - (qTemp + list_init.get(0).qmax)));
+						this.qTurbine = qTemp + list_init.get(0).qmax;
+						// change turbine 1 Qturbine
+						list_turbine.get(0).changeFirstTurbineQturbine(qTemp + list_init.get(0).qmax);
+					}
+				}
+				list_turbine.add(new Turbine(i+1,list_init.get(i).qmin, list_init.get(i).qmax, qTemp, false, qTurbine));
 			}
 		}
 	}
@@ -79,32 +175,20 @@ public class Programm {
 		 * 	S5max	|	f5(S5max)	|	S5max
 		 */
 		
-		// régler la taille du tableau de manière dynamique
-		firstStep = new float[turbine.getList_discretisation().size()][3];
-
-		// Autant de ligne que d'éléments dans discretisationList
-		for(int i = 0; i < turbine.getList_discretisation().size(); i++)
+		// Récupérer le tableau 
+		firstStep = new float[turbine.getFinalTable().length][turbine.getFinalTable()[0].length];
+		firstStep = turbine.getFinalTable();
+		
+		for(int i = 0; i < firstStep.length; i++)
 		{    
-			// 3 colonnes
-			for(int j = 0; j < 3; j++)
-			{
-				// Sn
-				firstStep[i][0] = turbine.getList_discretisation().get(i);
-				// fonction
-				firstStep[i][1] = ChooseFunction(turbine.getIndex(), turbine.getList_discretisation().get(i));
-				
-				// On regarde si on ne dépasse pas la valeur max de débit pour la turbine
-				if(turbine.getList_discretisation().get(i) > turbine.getMaxStreamFlowTurbine())
-				{
-					firstStep[i][1] = 0;
-				}
-				// X*n
-				firstStep[i][2] = turbine.getList_discretisation().get(i);
-			}
-			System.out.print(firstStep[i][0] + " m3/s    " + firstStep[i][1] + " mW     " + firstStep[i][2] + " m3/s ");   
-			System.out.println("\n");
+			// fonction
+			firstStep[i][1] = ChooseFunction(turbine.getIndex(), firstStep[i][0]);
+			// X*n
+			firstStep[i][2] = firstStep[i][0];
 		}
-		list_table.add(firstStep);
+		turbine.setTemporyTable(firstStep);
+		turbine.setFinalTable(firstStep);
+		turbine.ShowFinalTable();
 	}
 	
 	public void MiddleStep(Turbine turbine) {
@@ -112,155 +196,86 @@ public class Programm {
 		// Cette méthode prend une turbine à la fois, rempli un nouveau tableau et ajoute celui-ci à une liste de tableau.
 		/* i = 2;3;4
 		 * 
-		 *	Si/xi	|	0		|	5			|	10	|	15	|	..	|	n	|
-		 *	0		|	0		|	x			|	x	|	x	|	x	|	x	|	
-		 *	5 		|	f5(5)	|	f5(5)+fi	|	x	|	x	|	x	|	x	|	
-		 *	10		|	f5(10)	|	..			|	..	|	x	|	x	|	x	|	
-		 * 	15		|	f5(15)	|	..			|	..	|	..	|	x	|	x	|	
-		 * 	..		|	..		|	..			|	..	|	..	|	..	|	x	|
-		 * 	n		|	f5(n)	|	
+		 *	Si/xi	|		0		|	5			|	10	|	15	|	..	|	n	|
+		 *	0		|		0		|	x			|	x	|	x	|	x	|	x	|	
+		 *	5 		|		f5(5)	|	f5(5)+fi	|	x	|	x	|	x	|	x	|	
+		 *	10		|		f5(10)	|	..			|	..	|	x	|	x	|	x	|	
+		 * 	15		|		f5(15)	|	..			|	..	|	..	|	x	|	x	|	
+		 * 	..		|		..		|	..			|	..	|	..	|	..	|	x	|
+		 * 	180*n	|	f5(180*n)	|	
 		 */
 		
+		// Récupérer le tableau temporaire
+		temporyStep = new float[turbine.getTemporyTable().length][turbine.getTemporyTable()[0].length];
+		temporyStep = turbine.getTemporyTable();
+		// tableau final étape
+		finalStep = new float[turbine.getFinalTable().length][turbine.getFinalTable()[0].length];
+		finalStep = turbine.getFinalTable();
 		// L'ancien tableau à l'index n-1 de la liste de tableau
-		previousStep = list_table.get(indexPreviousStep);
-		// tableau intermédiaire index n
-		temporyStep = new float[turbine.getList_discretisation().size()][turbine.getList_discretisation().size()];
-		// tableau final étape n
-		thisStep = new float[turbine.getList_discretisation().size()][3];
+		previousStep = list_turbine.get(turbine.getIndex()).getFinalTable();
 		
-		// Autant de ligne que d'éléments dans discretisationList
-		for(int i = 0; i < turbine.getList_discretisation().size(); i++)
+		
+		for(int i = 0; i < temporyStep.length; i++)
 		{    
-				thisStep[i][1] = -100;
-				// Autant de colonnes que d'éléments dans discretisationList
-				for(int j = 0; j < turbine.getList_discretisation().size(); j++)
-				{
-					thisStep[i][0] = turbine.getList_discretisation().get(i);
-					// Première colonne
-					if(j == 0) {
-						temporyStep[i][j] = turbine.getList_discretisation().get(i);
-						// J'écris ça avant d'écrire le tableau.
-						//System.out.print(thisStep[i][0] + " m3/s     "); 
-					} 
-					// si colonne index supérieur à ligne index = X
-					if(j > i)
-					{
-						temporyStep[i][j] = -1;
-					}
-					else {
-						// Fn+1(Sn) ok
-						temporyStep[i][j] = ChooseFunction(turbine.getIndex(), turbine.getList_discretisation().get(j));
-						
-						temporyStep[i][j] = temporyStep[i][j] + previousStep[i - j][1];
-						
-						// On regarde si on ne dépasse pas la valeur max de débit pour la turbine
-						if(turbine.getList_discretisation().get(i) > turbine.getMaxStreamFlowTurbine())
-						{
-							temporyStep[i][j] = 0;
-						}
+			for(int j = 0; j < temporyStep[0].length; j++)
+			{
+				if(j != 0) {
+					// Ne prendre en compte que les valeurs possibles
+					if(!(temporyStep[i][j] == -100000)) {
+						temporyStep[i][j] = ChooseFunction(turbine.getIndex(), temporyStep[j-1][0]);
+						temporyStep[i][j] = temporyStep[i][j] + previousStep[i - j +1][1];
 						
 						// On prend la meilleure valeur de la ligne et le débit qui lui a été donné
-						if(thisStep[i][1] < temporyStep[i][j]) {
-							thisStep[i][1] = temporyStep[i][j];
-							thisStep[i][2] = turbine.getList_discretisation().get(j);
+						if(finalStep[i][1] < temporyStep[i][j]) {
+							finalStep[i][1] = temporyStep[i][j];
+							finalStep[i][2] = turbine.getFirstLine()[j-1];
 						}
 					}
-					
-					if(temporyStep[i][j] != -1) {
-						//System.out.print("   " + temporyStep[i][j] + " mW    "); 
-					}
-					else {
-						//System.out.print("   " + temporyStep[i][j] + "       "); 
-					}
 				}
-			//System.out.println("\n");
-		}
-		//System.out.println("\n");
-		
-		// Affichage du tableau final
-		for(int i = 0; i < turbine.getList_discretisation().size(); i++)
-		{  
-				for(int j = 0; j < 3; j++)
-				{
-					if(j == 0) {
-						System.out.print(thisStep[i][j] + " m3/s     "); 
-					} 
-					if(j == 1) {
-
-						System.out.print(thisStep[i][j] + " mW     ");
-					}
-					if(j == 2) {
-						System.out.print(thisStep[i][j] + " m3/s     ");
-					}
-				}
-			 System.out.println("\n");
-		}
-		// On ajoute le tableau à la liste de tableau
-		list_table.add(thisStep);
-		indexPreviousStep++;
+			}
+		}		
+		// Affichage tableau final
+		turbine.setTemporyTable(temporyStep);
+		turbine.setFinalTable(finalStep);
+		//turbine.ShowTemporyTable();
+		turbine.ShowFinalTable();
 	}
 	
 	public void LastStep(Turbine turbine) {
-		System.out.print("étape n= " + turbine.getIndex() + "\n"); 
-		
+		System.out.print("étape n= " + turbine.getIndex() + "\n");
+		// Récupérer le tableau temporaire
+		temporyStep = new float[1][turbine.getTemporyTable()[0].length+1];
+		temporyStep = turbine.getTemporyTable();
+		// tableau final étape
+		finalStep = new float[1][3];
+		finalStep = turbine.getFinalTable();
 		// L'ancien tableau à l'index n-1 de la liste de tableau
-		previousStep = list_table.get(indexPreviousStep);
+		previousStep = list_turbine.get(turbine.getIndex()).getFinalTable();
 		
-		// tableau intermédiaire index n
-		float[] temporyLastStep = new float[turbine.getList_discretisation().size()];
 		
-		// tableau final étape finale
-		lastStep = new float[1][3];
-		
-		lastStep[0][1] = -100;
-		// Autant de colonnes que d'éléments dans discretisationList + fn*(Sn) + X*n
-		for(int j = 0; j < turbine.getList_discretisation().size(); j++)
+		for(int i = 0; i < temporyStep[0].length; i++)
 		{
-			// Première colonne
-			if(j == 0) {
-				lastStep[0][j] = turbine.getList_discretisation().get(turbine.getList_discretisation().size() - 1);
-				//
-				temporyLastStep[j] = ChooseFunction(turbine.getIndex(), turbine.getList_discretisation().get(j));
-				temporyLastStep[j] = temporyLastStep[j] + previousStep[turbine.getList_discretisation().size() - 1 - j][1];
+			if(i != 0) {
+				temporyStep[0][i] = ChooseFunction(turbine.getIndex(), turbine.getFirstLine()[i-1]);
 				
-				System.out.print(lastStep[0][j] + " m3/s   ");   
-			} 
-			else {
-				// Fn+1(Sn) ok
-				temporyLastStep[j] = ChooseFunction(turbine.getIndex(), turbine.getList_discretisation().get(j));
-				
-				temporyLastStep[j] = temporyLastStep[j] + previousStep[turbine.getList_discretisation().size() - 1 - j][1];
-				
-				if(turbine.getList_discretisation().get(j) > turbine.getMaxStreamFlowTurbine()) {
-					temporyLastStep[j] = 0;
+				if(temporyStep[0][0] - (i-1)*5 <= list_turbine.get(turbine.getIndex()).getSommeDiscretisation()) {
+					temporyStep[0][i] = temporyStep[0][i] + previousStep[(int) (temporyStep[0][0]/5.0 - i +1)][1];
+
+					// On prend la meilleure valeur de la ligne et le débit qui lui a été donné
+					if(finalStep[0][1] < temporyStep[0][i]) {
+						finalStep[0][1] = temporyStep[0][i];
+						finalStep[0][2] = turbine.getFirstLine()[i-1];
+					}
+				}else {
+					temporyStep[0][i] = -100000;
 				}
 			}
-			// On prend la meilleure valeur de la ligne et le débit qui lui a été donné
-			if(lastStep[0][1] < temporyLastStep[j]) {
-				lastStep[0][1] = temporyLastStep[j];
-				lastStep[0][2] = turbine.getList_discretisation().get(j);
-			}
-			System.out.print("  " + temporyLastStep[j] + " mW    ");
-		}
-		System.out.print("\n"); 
-		
-		// Affichage du tableau final
-		for(int j = 0; j < 3; j++)
-		{
-			if(j == 0) {
-				System.out.print(lastStep[0][j] + " m3/s     "); 
-			} 
-			if(j == 1) {
-
-				System.out.print(lastStep[0][j] + " mW     ");
-			}
-			if(j == 2) {
-				System.out.print(lastStep[0][j] + " m3/s     ");
-			}
-		}
-		// On ajoute le tableau à la liste de tableau
-		list_table.add(lastStep);
-		System.out.print("\n");
+		}		
+		// Affichage tableau final
+		turbine.setTemporyTable(temporyStep);
+		turbine.setFinalTable(finalStep);
+		turbine.ShowTemporyTable();
+		turbine.ShowFinalTable();
 	}
 	
 	// Cette méthode permet de choisir la fonction à calculer en fonction de l'index de la turbine concernée.
@@ -305,10 +320,13 @@ public class Programm {
 	}
 	
 	public float function3(float Qturbine){
-		//P3(x,y) = 2.743×10−3y2 + 9.896×10−3x∗y + 2.222×10−3x2 - 2.912×10−1y − 1.184×10−1x + 1.507
+		//P3(x,y) = -1.562×10−5x2*y - 1.562.10-5x3+ 6.494×10−3x∗y + 3.543×10−3x2 + 1.672×10−3y − 1.672×10−1x - 4.805.10-2
 		float hauteurChutteNette3 = CalculateHauteurChuteNette(Qturbine);
 		
-		float productionTurbine3 = (float) ((2.743 * Math.pow(10.0, -3.0) * Math.pow(Qturbine, 2)) + ((9.896 * Math.pow(10.0, -3.0) * hauteurChutteNette3 * Qturbine)) + (2.222 * Math.pow(10.0, -3.0) * Math.pow(hauteurChutteNette3,2)) - (2.912 * Math.pow(10.0, -1.0) * Qturbine) - (1.184 * Math.pow(10.0, -1.0) * hauteurChutteNette3) + 1.507) ;
+		float productionTurbine3 = (float) ((-1.562 * Math.pow(10.0, -5.0) * Math.pow(Qturbine, 2) * hauteurChutteNette3) 
+				- (1.562 * Math.pow(10.0, -5.0) * Math.pow(Qturbine, 3)) + ((6.494 * Math.pow(10.0, -3.0) * hauteurChutteNette3 * Qturbine)) 
+				+ (3.543* Math.pow(10.0, -3.0) * Math.pow(Qturbine, 2)) + (1.672 * Math.pow(10.0, -3.0) *hauteurChutteNette3) 
+				- (1.672 * Math.pow(10.0, -1.0) * Qturbine) + (Math.pow(1.507 , 2))) ;
 		return productionTurbine3;
 	}
 	
@@ -339,6 +357,7 @@ public class Programm {
 	public void RunBackward() {
 
 		System.out.print("\n Backward : \n");
+		System.out.println(list_turbine.size());
 		for(int i = list_turbine.size()-1; i > 0 ; i--)
 		{
 			if(i == list_turbine.size()-1) {
@@ -358,48 +377,50 @@ public class Programm {
 		/*
 		 * Recalculer pour chaque débit la production d'une turbine puis faire le set StreamPower
 		 */
-		
 		System.out.print("\n Forward : \n");
-		
-		// entier qui nous indique combien de débit est cumulé par itération - ne doit pas dépasser débit maximum par turbine
-		int currentDebitCumul = 0;
-		
+				
+		int cumuledStreamFlow = 0;
 		for(int i = 0; i < list_turbine.size(); i++)
 		{
+			// Récupérer la turbine en cours
+			Turbine currentTurbine = list_turbine.get(i);
+					
 			// Premier tableau différent des autres.
 			if(i == 0) {
-				thisStep = new float[1][3];
-				thisStep = list_table.get(list_turbine.size() - 1 - i);
-				
-				System.out.print(" Puissance totale récupérée par toutes les turbines: " + thisStep[0][1] + "  mW   \n");
-				
+				// Puissance totale
+				temporyStep = new float[1][3];
+				temporyStep = currentTurbine.getFinalTable();
+				setFinalPowerProduction(temporyStep[0][1]);
+				System.out.print(" Puissance totale récupérée par toutes les turbines: " + getFinalPowerProduction() + "  mW   \n");
+
 				// récupérer le débit qui maximise pour l'étape 1
+				int firstTurbineStreamFlow = (int) temporyStep[0][2];
+				temporyStep = new float[1][currentTurbine.getTemporyTable()[0].length];
+				temporyStep = currentTurbine.getTemporyTable();
+				
 				System.out.print("Turbine n = " + (i+1) + "\n");
-				currentDebitCumul = (int) thisStep[0][2];
-				list_turbine.get(i).setFinalStreamFlow((int) thisStep[0][2]);
-				list_turbine.get(i).setFinalPowerFlow(ChooseFunction(list_turbine.get(i).getIndex(), (int) thisStep[0][2]));
-				System.out.print(" Débit à donner : " + list_turbine.get(i).getFinalStreamFlow() + " m3/s    \n");
-				System.out.print(" Puissance récupérée pour cette turbine : " + list_turbine.get(i).getFinalPowerFlow() + "  mW   \n");
+				currentTurbine.setFinalStreamFlow(firstTurbineStreamFlow);
+				currentTurbine.setFinalPowerFlow(ChooseFunction(currentTurbine.getIndex(),firstTurbineStreamFlow));
+				// On fait la soustraction de Qturbine avec le débit de la turbine 1
+				cumuledStreamFlow = (int) (qTurbine - currentTurbine.getFinalStreamFlow());
+				System.out.print(" Débit à donner : " + currentTurbine.getFinalStreamFlow() + " m3/s    \n");
+				System.out.print(" Puissance récupérée pour cette turbine : " + currentTurbine.getFinalPowerFlow() + "  mW   \n");
 			}
 			else {
 				System.out.print("Turbine n = " + (i+1) + "\n");
-				thisStep = new float[list_turbine.get(i).getList_discretisation().size()][3];
-				thisStep = list_table.get(list_turbine.size() - 1 - i);
-				
-				// Autant de ligne que d'éléments dans discretisationList
-				for(int i2 = 0; i2 < list_turbine.get(i).getList_discretisation().size(); i2++)
-				{
-					// Débit max - currentDebitCumul
-					if(thisStep[i2][0] == list_turbine.get(i).getList_discretisation().get(list_turbine.get(i).getList_discretisation().size() - 1) - currentDebitCumul) {
-						list_turbine.get(i).setFinalStreamFlow((int) thisStep[i2][2]);
-						list_turbine.get(i).setFinalPowerFlow((ChooseFunction(list_turbine.get(i).getIndex(), (int) thisStep[i2][2])));
-						
-						currentDebitCumul = currentDebitCumul + (int) thisStep[i2][2];
-						
-						System.out.print(" Débit à donner : " + list_turbine.get(i).getFinalStreamFlow() + " m3/s    \n");
-						System.out.print(" Puissance récupérée pour cette turbine  : " + list_turbine.get(i).getFinalPowerFlow() + "  mW   \n");
-					}
-				}
+
+				// récupérer le débit qui maximise pour l'étape 2 à n
+				temporyStep = new float[currentTurbine.getFinalTable().length][currentTurbine.getFinalTable()[0].length];
+				temporyStep = currentTurbine.getFinalTable();
+
+				int middleTurbineStreamFlow = (int) temporyStep[cumuledStreamFlow/5][2];
+				currentTurbine.setFinalStreamFlow(middleTurbineStreamFlow);
+				currentTurbine.setFinalPowerFlow(ChooseFunction(currentTurbine.getIndex(), middleTurbineStreamFlow));
+
+				// On fait la soustraction de Qturbine avec le débit de la turbine 1
+				cumuledStreamFlow = (int) (cumuledStreamFlow - currentTurbine.getFinalStreamFlow());
+				System.out.print(" Débit à donner : " + currentTurbine.getFinalStreamFlow() + " m3/s    \n");
+				System.out.print(" Puissance récupérée pour cette turbine : " + currentTurbine.getFinalPowerFlow() + "  mW   \n");
 			}
 		}
 	}

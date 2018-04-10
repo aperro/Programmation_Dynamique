@@ -15,13 +15,16 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 public class Main {
 	
 	public static final String XLSX_FILE_PATH = "./dataTwoRows.xlsx";
+	// Liste des initialisations
+	private static ArrayList<Initialisation> list_init = new ArrayList<Initialisation>();
 
 	public static void main(String[] args) throws IOException, InvalidFormatException {
 		Scanner sc = new Scanner(System.in);
 		
 		boolean turbines_enable;
 		boolean turbines_SameStreamFlow;
-	/*
+		
+		/*
 		//Recuperation des données du fichier excel
 		ArrayList<Double> test_nivAmont=new ArrayList<Double>();
 		ArrayList<Double> test_Qturb=new ArrayList<Double>();
@@ -37,6 +40,7 @@ public class Main {
 		//System.out.println(test_nivAmont.size()+" "+test_Qturb.size());
 		*/
 		
+		/*
 		// Get variable
 		System.out.println("Quel est le débit que vous voulez optimiser ? (multiple de 5)");
 		String str = sc.nextLine();
@@ -79,10 +83,23 @@ public class Main {
 			turbines_SameStreamFlow = false;
 		}
 		
+		
+		
 		// Begin Programm
-		Programm programm = new Programm(Integer.parseInt(str), Float.parseFloat(str2), turbines_enable, turbines_SameStreamFlow);
+		Programm programm = new Programm(Float.parseFloat(str), Float.parseFloat(str2), turbines_enable, turbines_SameStreamFlow);
 		programm.RunBackward();
 		programm.RunForward();
+		*/
+		
+		Interface frame = new Interface();
+	}
+
+	public static ArrayList<Initialisation> getList_init() {
+		return list_init;
+	}
+
+	public void setList_init(ArrayList<Initialisation> list_init) {
+		this.list_init = list_init;
 	}
 
 }
