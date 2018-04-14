@@ -14,6 +14,10 @@ public class Turbine {
 	private int sommeDiscretisation;
 
 	private float[] firstLine;
+	private float[][] temporyTable;
+	private float[][] finalTable;
+	
+	
 	public float[] getFirstLine() {
 		return firstLine;
 	}
@@ -21,9 +25,6 @@ public class Turbine {
 	public void setFirstLine(float[] firstLine) {
 		this.firstLine = firstLine;
 	}
-
-	private float[][] temporyTable;
-	private float[][] finalTable;
 
 	// Liste des débits possible pour cette turbine - 5 par 5 (0...5...10...15...)
 	private List<Integer> list_discretisation= new ArrayList<Integer>();

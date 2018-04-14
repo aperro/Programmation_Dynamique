@@ -123,6 +123,8 @@ public class Interface extends JFrame implements MouseListener, ActionListener {
 		Show();
 	}
 
+	
+	
 	public void Show()
 	{
 		// Les images de turbines (peut être fait dans une boucle)

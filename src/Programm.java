@@ -4,13 +4,6 @@ import java.util.Scanner;
 public class Programm {	
 	// Liste des turbines
 	private ArrayList<Turbine> list_turbine = new ArrayList<Turbine>();
-	public ArrayList<Turbine> getList_turbine() {
-		return list_turbine;
-	}
-
-	public void setList_turbine(ArrayList<Turbine> list_turbine) {
-		this.list_turbine = list_turbine;
-	}
 
 	// Liste des initialisations
 	private ArrayList<Initialisation> list_init = new ArrayList<Initialisation>();
@@ -54,7 +47,7 @@ public class Programm {
 		this.qTurbine = qTurbine;
 		this.elevAmont = elevAmont;
 		
-		// On regarde si list_init est supérieur à 2 élements
+		// On regarde si list_init est supérieur à 2 élements sinon on considère la centrale comme fermée
 		assert(list_init.size() > 2);
 		int qTemp = 0;
 		
@@ -77,7 +70,7 @@ public class Programm {
 					list_turbine.get(0).changeFirstTurbineQturbine(qTemp + list_init.get(0).qmax);
 				}
 			}
-			list_turbine.add(new Turbine(i+1,list_init.get(i).qmin, list_init.get(i).qmax, qTemp, false, qTurbine));
+			list_turbine.add(new Turbine(list_init.get(i).index,list_init.get(i).qmin, list_init.get(i).qmax, qTemp, false, qTurbine));
 		}
 	}
 	
@@ -212,7 +205,7 @@ public class Programm {
 		finalStep = new float[turbine.getFinalTable().length][turbine.getFinalTable()[0].length];
 		finalStep = turbine.getFinalTable();
 		// L'ancien tableau à l'index n-1 de la liste de tableau
-		previousStep = list_turbine.get(turbine.getIndex()).getFinalTable();
+		previousStep = list_turbine.get(indexPreviousStep).getFinalTable();
 		
 		
 		for(int i = 0; i < temporyStep.length; i++)
@@ -239,6 +232,7 @@ public class Programm {
 		turbine.setFinalTable(finalStep);
 		//turbine.ShowTemporyTable();
 		turbine.ShowFinalTable();
+		
 	}
 	
 	public void LastStep(Turbine turbine) {
@@ -250,7 +244,7 @@ public class Programm {
 		finalStep = new float[1][3];
 		finalStep = turbine.getFinalTable();
 		// L'ancien tableau à l'index n-1 de la liste de tableau
-		previousStep = list_turbine.get(turbine.getIndex()).getFinalTable();
+		previousStep = list_turbine.get(indexPreviousStep).getFinalTable();
 		
 		
 		for(int i = 0; i < temporyStep[0].length; i++)
@@ -259,7 +253,7 @@ public class Programm {
 				temporyStep[0][i] = ChooseFunction(turbine.getIndex(), turbine.getFirstLine()[i-1]);
 				
 				if(temporyStep[0][0] - (i-1)*5 <= list_turbine.get(turbine.getIndex()).getSommeDiscretisation()) {
-					temporyStep[0][i] = temporyStep[0][i] + previousStep[(int) (temporyStep[0][0]/5.0 - i +1)][1];
+					temporyStep[0][i] = temporyStep[0][i] + previousStep[(int) (temporyStep[0][0]/5.0 - i + 1)][1];
 
 					// On prend la meilleure valeur de la ligne et le débit qui lui a été donné
 					if(finalStep[0][1] < temporyStep[0][i]) {
@@ -363,10 +357,15 @@ public class Programm {
 			if(i == list_turbine.size()-1) {
 				// Faire étape 1
 				FirstStep(list_turbine.get(i));
+				// Set a new previous index step
+				indexPreviousStep = i;
 			}
 			else {
 				// Faire étape 2 à n-1
 				MiddleStep(list_turbine.get(i));
+
+				// Set a new previous index step
+				indexPreviousStep = i;
 			}
 		}
 		// Faire dernière étape
@@ -398,7 +397,7 @@ public class Programm {
 				temporyStep = new float[1][currentTurbine.getTemporyTable()[0].length];
 				temporyStep = currentTurbine.getTemporyTable();
 				
-				System.out.print("Turbine n = " + (i+1) + "\n");
+				System.out.print("Turbine n = " + list_turbine.get(i).getIndex() + "\n");
 				currentTurbine.setFinalStreamFlow(firstTurbineStreamFlow);
 				currentTurbine.setFinalPowerFlow(ChooseFunction(currentTurbine.getIndex(),firstTurbineStreamFlow));
 				// On fait la soustraction de Qturbine avec le débit de la turbine 1
@@ -407,7 +406,7 @@ public class Programm {
 				System.out.print(" Puissance récupérée pour cette turbine : " + currentTurbine.getFinalPowerFlow() + "  mW   \n");
 			}
 			else {
-				System.out.print("Turbine n = " + (i+1) + "\n");
+				System.out.print("Turbine n = " + list_turbine.get(i).getIndex() + "\n");
 
 				// récupérer le débit qui maximise pour l'étape 2 à n
 				temporyStep = new float[currentTurbine.getFinalTable().length][currentTurbine.getFinalTable()[0].length];
@@ -424,4 +423,14 @@ public class Programm {
 			}
 		}
 	}
+	
+	
+	public ArrayList<Turbine> getList_turbine() {
+		return list_turbine;
+	}
+
+	public void setList_turbine(ArrayList<Turbine> list_turbine) {
+		this.list_turbine = list_turbine;
+	}
+
 }
